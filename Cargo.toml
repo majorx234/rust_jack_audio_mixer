@@ -4,9 +4,15 @@ version = "0.1.0"
 authors = ["MajorX234 <majorx234@googlemail.com>"]
 edition = "2018"
 
+[lib]
+name = "mixer_lib"
+path = "src/lib.rs"
+
 [[bin]]
 name = "mixer_gui"
 path = "src/mixer_gui/bin/main.rs"
 
 [dependencies]
 jack = "0.10.0"
+wmidi = "4.0.0"
+crossbeam-channel = "0.5.6"
