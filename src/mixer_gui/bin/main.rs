@@ -1,12 +1,22 @@
 extern crate jack;
+extern crate wmidi;
+use std::sync::mpsc;
 use std::{thread, time::Duration};
+mod jackmidi;
+use jackmidi::MidiMsg;
 
 fn main() {
-    let audio_thread = start_audio_thread();
+    let (midi_sender, midi_receiver): (
+        std::sync::mpsc::SyncSender<MidiMsg>,
+        std::sync::mpsc::Receiver<MidiMsg>,
+    ) = mpsc::sync_channel(64);
+    let audio_thread = start_audio_thread(midi_sender);
     audio_thread.join().unwrap();
 }
 
-fn start_audio_thread() -> std::thread::JoinHandle<()> {
+fn start_audio_thread(
+    midi_sender: std::sync::mpsc::SyncSender<MidiMsg>,
+) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let (client, _status) = jack::Client::new(
             "rust_jack_audio_mixer",
@@ -39,9 +49,20 @@ fn start_audio_thread() -> std::thread::JoinHandle<()> {
             .register_port("mixer_out_r", jack::AudioOut::default())
             .unwrap();
 
+        // midi_in ports
+        let midi_in = client
+            .register_port("mixer_midi_in", jack::MidiIn::default())
+            .unwrap();
+
         let frame_size = client.buffer_size();
 
         let process_callback = move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control {
+            let show_p = midi_in.iter(ps);
+            for e in show_p {
+                let c: MidiMsg = e.into();
+                let _ = midi_sender.try_send(c);
+            }
+
             let out_l_p = out_l.as_mut_slice(ps);
             let out_r_p = out_r.as_mut_slice(ps);
 
