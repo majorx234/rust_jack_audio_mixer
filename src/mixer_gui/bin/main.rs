@@ -1,5 +1,6 @@
 extern crate jack;
 extern crate wmidi;
+use itertools::izip;
 use std::sync::mpsc;
 use std::{thread, time::Duration};
 mod jackmidi;
@@ -71,8 +72,21 @@ fn start_audio_thread(
             let in1_l_p = in1_l.as_slice(ps);
             let in1_r_p = in1_r.as_slice(ps);
 
-            out_l_p.clone_from_slice(in0_l_p);
-            out_r_p.clone_from_slice(in0_r_p);
+            for (
+                _idx,
+                (
+                    sample_in0_l,
+                    sample_in0_r,
+                    sample_in1_l,
+                    sample_in1_r,
+                    sample_out_l,
+                    sample_out_r,
+                ),
+            ) in izip!(in0_l_p, in0_r_p, in1_l_p, in1_r_p, out_l_p, out_r_p).enumerate()
+            {
+                *sample_out_l = *sample_in0_l + *sample_in1_l;
+                *sample_out_r = *sample_in0_r + *sample_in1_r;
+            }
 
             jack::Control::Continue
         };
