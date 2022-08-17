@@ -11,11 +11,11 @@ fn main() {
         std::sync::mpsc::SyncSender<MidiMsg>,
         std::sync::mpsc::Receiver<MidiMsg>,
     ) = mpsc::sync_channel(64);
-    let audio_thread = start_audio_thread(midi_sender);
+    let audio_thread = start_jack_thread(midi_sender);
     audio_thread.join().unwrap();
 }
 
-fn start_audio_thread(
+fn start_jack_thread(
     midi_sender: std::sync::mpsc::SyncSender<MidiMsg>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
