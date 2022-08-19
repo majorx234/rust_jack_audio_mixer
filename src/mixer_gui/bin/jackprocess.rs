@@ -45,6 +45,9 @@ pub fn start_jack_thread(
 
         let frame_size = client.buffer_size();
 
+        let mut volume_ctrl0: f32 = 1.0;
+        let mut volume_ctrl1: f32 = 1.0;
+
         let process_callback = move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control {
             let show_p = midi_in.iter(ps);
             for e in show_p {
@@ -60,6 +63,19 @@ pub fn start_jack_thread(
             let in1_l_p = in1_l.as_slice(ps);
             let in1_r_p = in1_r.as_slice(ps);
 
+            match rx_mix.try_recv() {
+                Ok(rx) => {
+                    let (channel, volume) = rx;
+                    if channel == 0 {
+                        volume_ctrl0 = volume;
+                    }
+                    if (channel == 1) {
+                        volume_ctrl1 = volume;
+                    }
+                }
+                Err(_) => {}
+            };
+
             for (
                 _idx,
                 (
@@ -72,8 +88,8 @@ pub fn start_jack_thread(
                 ),
             ) in izip!(in0_l_p, in0_r_p, in1_l_p, in1_r_p, out_l_p, out_r_p).enumerate()
             {
-                *sample_out_l = *sample_in0_l + *sample_in1_l;
-                *sample_out_r = *sample_in0_r + *sample_in1_r;
+                *sample_out_l = *sample_in0_l * volume_ctrl0 + *sample_in1_l * volume_ctrl1;
+                *sample_out_r = *sample_in0_r * volume_ctrl0 + *sample_in1_r * volume_ctrl1;
             }
 
             jack::Control::Continue
