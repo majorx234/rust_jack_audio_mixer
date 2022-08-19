@@ -4,6 +4,7 @@ use itertools::izip;
 use std::{thread, time::Duration};
 pub fn start_jack_thread(
     midi_sender: std::sync::mpsc::SyncSender<MidiMsg>,
+    rx_mix: std::sync::mpsc::Receiver<(u8, f32)>,
 ) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let (client, _status) = jack::Client::new(

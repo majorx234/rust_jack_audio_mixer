@@ -25,12 +25,14 @@ fn main() {
         while let Ok(m) = midi_receiver.recv() {
             let bytes: &[u8] = &m.data;
             let message = wmidi::MidiMessage::try_from(bytes);
-            if let Ok(wmidi::MidiMessage::ControlChange(channel, controlNumber, controlValue)) =
+            if let Ok(wmidi::MidiMessage::ControlChange(channel, control_number, control_value)) =
                 message
             {
-                let volume = u8::from(controlValue) as f32 / 127.0;
-                let mix_channel = u8::from(controlNumber);
-                tx_mix.send((mix_channel, volume)).unwrap();
+                let volume = u8::from(control_value) as f32 / 127.0;
+                let mix_channel = u8::from(control_number);
+                if mix_channel == 0 || mix_channel == 1 {
+                    tx_mix.send((mix_channel, volume)).unwrap();
+                }
             }
 
             println!("{:?}", m);
@@ -43,7 +45,7 @@ fn main() {
         println!("exit midi thread\n");
     });
 
-    let audio_thread = start_jack_thread(midi_sender);
+    let audio_thread = start_jack_thread(midi_sender, rx_mix);
     audio_thread.join().unwrap();
     midi_thread.join().unwrap();
 }
